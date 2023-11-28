@@ -26,7 +26,7 @@ def commentDetection():
     label_pred_ = [np.argmax(i, axis=0) for i in label_pred]
     label_pred_
 
-    keywords = ["spam", "winner"]
+    keywords = ["spam", "winner", "Spam", "Winner", "You won"]
     stringtocheck = sentences[0]
 
     def contains_keywords(stringtocheck, keywords):
