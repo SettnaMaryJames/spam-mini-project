@@ -4,8 +4,48 @@ from keras.models import load_model
 from keras.preprocessing.text import one_hot
 from keras.preprocessing.sequence import pad_sequences
 import numpy as np
+import nltk
+
+nltk.download("punkt")
+import pickle
+import string
+from nltk.corpus import stopwords
+import nltk
+from nltk.stem.porter import PorterStemmer
 
 lmodel = load_model("my_model.h5")
+
+
+ps = PorterStemmer()
+
+
+def transform_text(text):
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        if i not in stopwords.words("english") and i not in string.punctuation:
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        y.append(ps.stem(i))
+
+    return " ".join(y)
+
+
+tfidf = pickle.load(open("vectorizer.pkl", "rb"))
+model = pickle.load(open("model.pkl", "rb"))
 
 
 app = Flask(__name__)
@@ -17,30 +57,30 @@ def commentDetection():
     inputchr = str(request.args["query"])
     print("inputchr")
     print(inputchr)
-    sentences = [inputchr]
-    print("sentences")
-    print(sentences)
-    one_hot_sent = [one_hot(i, 10000) for i in sentences]
-    padsequences = pad_sequences(one_hot_sent, maxlen=80)
-    label_pred = lmodel.predict(padsequences)
-    label_pred_ = [np.argmax(i, axis=0) for i in label_pred]
-    label_pred_
 
-    keywords = ["spam", "winner", "Spam", "Winner", "You won"]
-    stringtocheck = sentences[0]
+    input_sms = inputchr
 
-    def contains_keywords(stringtocheck, keywords):
-        return any(keyword in stringtocheck for keyword in keywords)
-
-    print(label_pred_)
-    print(stringtocheck)
-    print(keywords)
-    if contains_keywords(stringtocheck, keywords) == True:
-        label_pred_[0] = 1
-
-    if label_pred_[0] == 0:
-        print("returning 0 safe")
-        return jsonpickle.encode("0")
-    else:
-        print("return 1 not safe")
+    # 1. preprocess
+    transformed_sms = transform_text(input_sms)
+    # 2. vectorize
+    vector_input = tfidf.transform([transformed_sms])
+    # 3. predict
+    result = model.predict(vector_input)[0]
+    # 4. Display
+    if result == 1:
         return jsonpickle.encode("1")
+    else:
+        return jsonpickle.encode("0")
+
+    # print(label_pred_)
+    # print(stringtocheck)
+    # print(keywords)
+    # if contains_keywords(stringtocheck, keywords) == True:
+    #     label_pred_[0] = 1
+
+    # if label_pred_[0] == 0:
+    #     print("returning 0 safe")
+    #     return jsonpickle.encode("0")
+    # else:
+    #     print("return 1 not safe")
+    #     return jsonpickle.encode("1")
